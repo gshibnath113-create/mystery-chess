@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chessvara — Mystery Chess</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<style>
+  :root{
+    --wood-dark:#2b1d14;
+    --wood-mid:#4a3728;
+    --ivory:#f2e9dc;
+    --gold:#c9a24b;
+    --gold-bright:#e6c874;
+    --sq-light:#eddfc4;
+    --sq-dark:#5c6e4f;
+    --danger:#a5432f;
+    --good:#5f7a4f;
+    --warn:#c98a2c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #3a2a1c 0%, var(--wood-dark) 60%);
+    color:var(--ivory);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 12px 60px;
+  }
+  h1,h2,h3{font-family:'Palatino','Georgia',serif; font-weight:700; margin:0;}
+  .brand{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .brand .crown{font-size:28px; color:var(--gold-bright); filter:drop-shadow(0 0 6px rgba(230,200,116,.5));}
+  .brand h1{font-size:26px; letter-spacing:1px; color:var(--ivory);}
+  .subtitle{color:var(--gold); font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; opacity:.85;}
+  .mystery-banner{
+    max-width:440px; text-align:center; font-size:12.5px; color:#d8cdb8;
+    background:rgba(0,0,0,.2); border:1px solid #5a4530; border-radius:10px;
+    padding:10px 14px; margin-bottom:18px; line-height:1.6;
+  }
+  .mystery-banner .star{color:var(--gold-bright);}
+
+  .panel{
+    background:linear-gradient(180deg, #3a2a1cee, #241810ee);
+    border:1px solid #5a4530;
+    border-radius:14px;
+    padding:20px;
+    width:100%;
+    max-width:460px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+
+  .mode-tabs{display:flex; gap:8px; margin-bottom:18px;}
+  .mode-tabs button{
+    flex:1; padding:10px; border-radius:8px; border:1px solid #5a4530;
+    background:#241810; color:var(--ivory); font-size:14px; font-family:inherit;
+    cursor:pointer; transition:.15s;
+  }
+  .mode-tabs button.active{background:var(--gold); color:#241810; border-color:var(--gold); font-weight:700;}
+
+  .settings-bar{margin-bottom:18px;}
+  .settings-bar .label{font-size:12px; color:var(--gold); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;}
+  .color-select{display:flex; gap:8px;}
+  .color-select button{
+    flex:1; padding:9px 6px; border-radius:8px; border:1px solid #5a4530;
+    background:#241810; color:var(--ivory); font-size:13px; font-family:inherit;
+    cursor:pointer; transition:.15s; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .color-select button.active{background:var(--gold); color:#241810; border-color:var(--gold); font-weight:700;}
+  .color-swatch{width:12px; height:12px; border-radius:50%; display:inline-block;}
+  .color-swatch.w{background:#f7f2e6; border:1px solid #8a7a5c;}
+  .color-swatch.b{background:#181210; border:1px solid #8a7a5c;}
+  .color-swatch.r{background:linear-gradient(135deg,#f7f2e6 50%, #181210 50%); border:1px solid #8a7a5c;}
+
+  .level-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px;}
+  .level-btn{
+    aspect-ratio:1; border-radius:10px; border:1px solid #5a4530;
+    background:#241810; color:var(--ivory); font-size:18px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    position:relative; transition:.15s;
+  }
+  .level-btn small{position:absolute; bottom:4px; font-size:8px; font-weight:400; letter-spacing:.5px; opacity:.7;}
+  .level-btn:hover{background:var(--wood-mid); transform:translateY(-2px);}
+
+  .supreme-btn{
+    width:100%; margin-top:4px; padding:16px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(135deg,#3a2a10,#1a1108);
+    border:1px solid var(--gold-bright);
+    color:var(--gold-bright); font-weight:700; font-size:16px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    box-shadow:0 0 18px rgba(230,200,116,.15);
+    transition:.15s;
+  }
+  .supreme-btn:hover{box-shadow:0 0 26px rgba(230,200,116,.35);}
+
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; background:#241810; border:1px solid #5a4530; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13.5px; gap:10px;}
+  .switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; cursor:pointer; inset:0; background:#5a4530; border-radius:24px; transition:.2s;}
+  .slider:before{content:""; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:var(--ivory); border-radius:50%; transition:.2s;}
+  .switch input:checked + .slider{background:var(--gold);}
+  .switch input:checked + .slider:before{transform:translateX(18px);}
+
+  .online-section{margin-bottom:16px;}
+  .online-section h4{font-size:13px; color:var(--gold); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;}
+  .join-row{display:flex; gap:8px;}
+  .join-row input{
+    flex:1; padding:11px; border-radius:9px; border:1px solid #5a4530; background:#1a1108; color:var(--ivory);
+    font-size:15px; letter-spacing:2px; text-transform:uppercase; font-family:inherit; text-align:center;
+  }
+  .primary-btn{
+    padding:12px 18px; border-radius:9px; border:none; background:var(--gold); color:#241810;
+    font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;
+  }
+  .primary-btn:disabled{opacity:.5; cursor:not-allowed;}
+  .ghost-btn{background:transparent; color:var(--ivory); border:1px solid #5a4530; border-radius:9px; padding:12px 18px; cursor:pointer; font-family:inherit; font-size:14px;}
+
+  .room-code-display{
+    text-align:center; padding:20px; background:#1a1108; border:1px dashed var(--gold); border-radius:12px; margin:14px 0;
+  }
+  .room-code-display .code{font-size:32px; letter-spacing:8px; color:var(--gold-bright); font-weight:700; margin:6px 0;}
+  .status-msg{text-align:center; font-size:13px; color:#d8cdb8; margin:10px 0;}
+  .error-msg{text-align:center; font-size:13px; color:#e8a494; margin:10px 0;}
+
+  .topbar{display:flex; justify-content:space-between; align-items:center; width:100%; max-width:420px; margin-bottom:10px;}
+  .topbar button{
+    background:none; border:1px solid #5a4530; color:var(--ivory); border-radius:8px;
+    padding:6px 12px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .status-line{font-size:14px; color:var(--gold-bright); text-align:center; margin-bottom:8px; min-height:20px; font-weight:600;}
+  .board-wrap{position:relative; transition: opacity .15s;}
+  .board-wrap.opponent-turn{opacity:.72;}
+  .board-wrap.opponent-turn::after{
+    content:""; position:absolute; inset:0; border-radius:6px;
+    box-shadow: inset 0 0 0 2px rgba(230,200,116,.35);
+    pointer-events:none;
+  }
+  .board{
+    position:relative;
+    display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
+    width:min(92vw,420px); height:min(92vw,420px);
+    border:4px solid var(--wood-mid); border-radius:6px; overflow:hidden;
+    box-shadow:0 12px 28px rgba(0,0,0,.5);
+    contain: layout paint;
+  }
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;}
+  .sq.light{background:var(--sq-light);}
+  .sq.dark{background:var(--sq-dark);}
+  .sq.sel{box-shadow:inset 0 0 0 3px var(--gold-bright);}
+  .sq.lastmove{box-shadow:inset 0 0 0 3px rgba(201,162,75,.6);}
+  .sq.check{box-shadow:inset 0 0 0 3px #e64f4f, 0 0 14px 2px rgba(230,79,79,.55); animation: checkpulse 1s infinite;}
+  @keyframes checkpulse{0%,100%{box-shadow:inset 0 0 0 3px #e64f4f, 0 0 10px 1px rgba(230,79,79,.4);} 50%{box-shadow:inset 0 0 0 3px #e64f4f, 0 0 18px 4px rgba(230,79,79,.7);}}
+  .sq .dot{width:22%; height:22%; border-radius:50%; background:rgba(40,30,15,.35); position:absolute;}
+  .sq .ring{position:absolute; inset:6%; border:3px solid rgba(40,30,15,.4); border-radius:50%;}
+  .sq .hint-mark{position:absolute; inset:0; box-shadow:inset 0 0 0 3px #e64f4f; border-radius:2px;}
+  .coord{position:absolute; font-size:9px; opacity:.55; color:#241810; pointer-events:none;}
+  .coord.file{bottom:1px; right:2px;}
+  .coord.rank{top:1px; left:2px;}
+
+  .piece-layer{position:absolute; inset:0; pointer-events:none;}
+  .piece-el{
+    position:absolute; width:12.5%; height:12.5%;
+    display:flex; align-items:center; justify-content:center;
+    transition: left .1s ease-out, top .1s ease-out;
+    pointer-events:none; will-change:left,top;
+  }
+  .piece{font-size:min(9vw,38px); line-height:1; pointer-events:none;}
+  .piece.piece-w{color:#f7f2e6; text-shadow:0 1px 2px rgba(0,0,0,.65), 0 0 1px rgba(0,0,0,.8);}
+  .piece.piece-b{color:#181210; text-shadow:0 1px 1px rgba(255,255,255,.18);}
+
+  .captured{display:flex; gap:4px; min-height:22px; font-size:16px; flex-wrap:wrap; width:min(92vw,420px);}
+  .captured.white{color:#f2e9dc;}
+  .captured.black{color:#8a7a5c;}
+
+  .controls{display:flex; gap:8px; width:min(92vw,420px); margin-top:12px; flex-wrap:wrap;}
+  .controls button{
+    flex:1; min-width:80px; padding:10px 6px; border-radius:9px; border:1px solid #5a4530;
+    background:#241810; color:var(--ivory); font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .controls button:hover{background:var(--wood-mid);}
+  .controls button:disabled{opacity:.35; cursor:not-allowed;}
+
+  .thinking{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--gold); justify-content:center; margin-top:6px; height:16px;}
+  .dotpulse{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1s infinite ease-in-out;}
+  .dotpulse:nth-child(2){animation-delay:.2s;} .dotpulse:nth-child(3){animation-delay:.4s;}
+  @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
+
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50;}
+  .modal{background:var(--wood-dark); border:1px solid var(--gold); border-radius:12px; padding:20px; text-align:center;}
+  .promo-choices{display:flex; gap:10px; margin-top:12px;}
+  .promo-choices button{font-size:32px; background:#241810; border:1px solid #5a4530; border-radius:8px; padding:8px 12px; cursor:pointer; color:var(--ivory);}
+
+  .result-box{text-align:center; padding:10px 0 4px;}
+  .result-title{font-size:22px; font-weight:700; margin-bottom:6px;}
+  .result-sub{font-size:13px; color:#d8cdb8; margin-bottom:16px;}
+
+  .analysis-panel{width:100%; max-width:460px;}
+  .eval-graph{width:100%; height:70px; background:#1c130c; border-radius:8px; margin-bottom:14px; border:1px solid #5a4530;}
+  .movelist{max-height:280px; overflow-y:auto; border:1px solid #5a4530; border-radius:8px;}
+  .move-row{display:grid; grid-template-columns:32px 1fr 1fr; gap:6px; padding:6px 10px; font-size:13px; border-bottom:1px solid #3a2a1c;}
+  .move-row:last-child{border-bottom:none;}
+  .mv.blunder{background:rgba(165,67,47,.25); color:#e8a494; padding:2px 6px; border-radius:5px;}
+  .mv.inaccuracy{background:rgba(201,138,44,.2); color:#e8c98f; padding:2px 6px; border-radius:5px;}
+  .mv.good{color:#d8cdb8;}
+  .summary-tags{display:flex; gap:10px; font-size:12px; margin-bottom:12px; flex-wrap:wrap;}
+  .tag{padding:4px 10px; border-radius:20px; border:1px solid #5a4530;}
+  .tag.blunder{border-color:var(--danger); color:#e8a494;}
+  .tag.inaccuracy{border-color:var(--warn); color:#e8c98f;}
+
+  .footer-hint{font-size:11px; opacity:.5; margin-top:24px; text-align:center; max-width:400px; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="brand"><span class="crown">♛</span><h1>Chessvara</h1></div>
+<div class="subtitle">Mystery Chess · 10 Levels + Supreme · Online 2-Player</div>
+
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, memo } = React;
+const { flushSync } = ReactDOM;
+
+const PIECE_UNICODE = {
+  wp:'♙',wn:'♘',wb:'♗',wr:'♖',wq:'♕',wk:'♔',
+  bp:'♟',bn:'♞',bb:'♝',br:'♜',bq:'♛',bk:'♚'
+};
+const PIECE_VAL = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+
+const PST = {
+  p:[0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10,
+     5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5,
+     5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+  n:[-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30,
+     -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30,
+     -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  b:[-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10,
+     -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10,
+     -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  r:[0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5,
+     -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5,
+     -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+  q:[-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10,
+     -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10,
+     -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  k:[-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+     -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10,
+     20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+};
+
+function evaluateBoard(chess){
+  const board = chess.board();
+  let score = 0;
+  for(let r=0;r<8;r++){
+    for(let f=0;f<8;f++){
+      const p = board[r][f];
+      if(!p) continue;
+      const idx = r*8+f;
+      const pst = PST[p.type][p.color==='w'?idx:63-idx];
+      const val = PIECE_VAL[p.type] + pst;
+      score += p.color==='w'? val : -val;
+    }
+  }
+  return score;
+}
+
+function orderedMoves(chess){
+  const moves = chess.moves({verbose:true});
+  moves.sort((a,b)=>{
+    const av = (a.captured?PIECE_VAL[a.captured]:0) + (a.promotion?800:0);
+    const bv = (b.captured?PIECE_VAL[b.captured]:0) + (b.promotion?800:0);
+    return bv-av;
+  });
+  return moves;
+}
+
+// Main-thread search — used only as a fallback if the Web Worker engine is unavailable
+function minimax(chess, depth, alpha, beta, maximizing){
+  if(depth===0 || chess.game_over()){
+    return { score: evaluateBoard(chess) };
+  }
+  const moves = orderedMoves(chess);
+  if(moves.length===0) return { score: evaluateBoard(chess) };
+  let best = null;
+  if(maximizing){
+    let val = -Infinity;
+    for(const m of moves){
+      chess.move(m.san);
+      const res = minimax(chess, depth-1, alpha, beta, false);
+      chess.undo();
+      if(res.score > val){ val = res.score; best = m.san; }
+      alpha = Math.max(alpha, val);
+      if(beta <= alpha) break;
+    }
+    return { score: val, move: best };
+  } else {
+    let val = Infinity;
+    for(const m of moves){
+      chess.move(m.san);
+      const res = minimax(chess, depth-1, alpha, beta, true);
+      chess.undo();
+      if(res.score < val){ val = res.score; best = m.san; }
+      beta = Math.min(beta, val);
+      if(beta <= alpha) break;
+    }
+    return { score: val, move: best };
+  }
+}
+
+function bestMove(chess, depth){
+  const maximizing = chess.turn()==='w';
+  const res = minimax(chess, depth, -Infinity, Infinity, maximizing);
+  return res.move;
+}
+
+function fallbackBestMove(fen, maxDepth, blunder){
+  const c = new Chess(fen);
+  const legal = c.moves();
+  if(legal.length===0) return null;
+  if(Math.random() < (blunder||0)) return legal[Math.floor(Math.random()*legal.length)];
+  const depth = Math.min(maxDepth||3, 3); // capped so the main thread never blocks too long
+  const mv = bestMove(c, depth);
+  return mv || legal[Math.floor(Math.random()*legal.length)];
+}
+
+/* ---------------- Stockfish engine (real engine, runs off the main thread) ---------------- */
+
+const SF_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/';
+const SF_URL = SF_BASE + 'stockfish.wasm.js';
+
+let sfWorker = null;
+let sfReadyPromise = null;
+let sfAvailable = true;
+
+function initEngine(){
+  if(sfReadyPromise) return sfReadyPromise;
+  sfReadyPromise = new Promise((resolve)=>{
+    let worker;
+    try{
+      worker = new Worker(SF_URL);
+    }catch(e){
+      sfAvailable = false; resolve(null); return;
+    }
+    let settled = false;
+    const failTimer = setTimeout(()=>{
+      if(!settled){ settled=true; sfAvailable=false; resolve(null); }
+    }, 8000);
+    function onMsg(e){
+      const line = e.data;
+      if(line==='uciok'){
+        worker.postMessage('isready');
+      } else if(line==='readyok' && !settled){
+        settled = true;
+        clearTimeout(failTimer);
+        worker.removeEventListener('message', onMsg);
+        worker.postMessage('setoption name Threads value 1');
+        worker.postMessage('setoption name Hash value 4');
+        worker.postMessage('setoption name MultiPV value 1');
+        sfWorker = worker;
+        resolve(worker);
+        // fire a trivial silent search so the engine's search path is warm before the player's first move
+        sfGo(worker, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 0, 5, null);
+      }
+    }
+    worker.addEventListener('message', onMsg);
+    worker.onerror = function(){
+      if(!settled){ settled=true; sfAvailable=false; clearTimeout(failTimer); resolve(null); }
+    };
+    worker.postMessage('uci');
+  });
+  return sfReadyPromise;
+}
+
+function uciToMove(u){
+  if(!u || u==='(none)') return null;
+  const move = { from:u.slice(0,2), to:u.slice(2,4) };
+  if(u.length>4) move.promotion = u[4];
+  return move;
+}
+
+// Runs one search on the persistent Stockfish worker and resolves with the UCI move string.
+// onInfo(depth, scoreCp) is called for each "info" line so the UI can show live search progress.
+function sfGo(worker, fen, skill, movetimeMs, onInfo){
+  return new Promise((resolve)=>{
+    let lastMove = null;
+    let lastReportedDepth = null;
+    function onMsg(e){
+      const line = e.data;
+      if(typeof line !== 'string') return;
+      if(onInfo && line.startsWith('info') && line.indexOf('score')!==-1){
+        // Only a completed-depth summary line has a "score" — the frequent
+        // per-candidate-move progress pings don't, so this cuts message volume a lot.
+        const dMatch = line.match(/\bdepth (\d+)/);
+        if(dMatch){
+          const d = parseInt(dMatch[1],10);
+          if(d !== lastReportedDepth){
+            lastReportedDepth = d;
+            const cpMatch = line.match(/\bscore cp (-?\d+)/);
+            const mateMatch = line.match(/\bscore mate (-?\d+)/);
+            onInfo(d, cpMatch?parseInt(cpMatch[1],10):null, mateMatch?parseInt(mateMatch[1],10):null);
+          }
+        }
+      } else if(line.startsWith('bestmove')){
+        worker.removeEventListener('message', onMsg);
+        lastMove = line.split(' ')[1];
+        resolve(lastMove);
+      }
+    }
+    worker.addEventListener('message', onMsg);
+    worker.postMessage('setoption name Skill Level value '+skill);
+    worker.postMessage('position fen '+fen);
+    worker.postMessage('go movetime '+movetimeMs);
+  });
+}
+
+async function requestEngineMove(fen, level, onInfo){
+  const cfg = LEVEL_CONFIG[level];
+  if(sfAvailable){
+    const worker = await initEngine();
+    if(worker){
+      const uci = await sfGo(worker, fen, cfg.skill, cfg.movetime, onInfo);
+      const mv = uciToMove(uci);
+      if(mv) return mv;
+    }
+  }
+  // Offline fallback if Stockfish couldn't load (network blocked, etc.)
+  const san = fallbackBestMove(fen, cfg.fallbackDepth, cfg.blunder);
+  if(!san) return null;
+  const c = new Chess(fen);
+  const verbose = c.moves({verbose:true});
+  const match = verbose.find(m=>m.san===san);
+  return match ? {from:match.from, to:match.to, promotion:match.promotion} : null;
+}
+
+async function requestHintMove(fen, onInfo){
+  if(sfAvailable){
+    const worker = await initEngine();
+    if(worker){
+      const uci = await sfGo(worker, fen, 20, 350, onInfo);
+      const mv = uciToMove(uci);
+      if(mv) return mv;
+    }
+  }
+  const san = fallbackBestMove(fen, 3, 0);
+  if(!san) return null;
+  const c = new Chess(fen);
+  const verbose = c.moves({verbose:true});
+  const match = verbose.find(m=>m.san===san);
+  return match ? {from:match.from, to:match.to, promotion:match.promotion} : null;
+}
+
+// Stockfish "Skill Level" (0–20) + a movetime budget (ms) per level.
+// Skill Level makes the engine itself play weaker/more human-like at low values,
+// instead of us faking it with random blunders.
+const LEVEL_CONFIG = {
+  1:{skill:0,  movetime:25,  fallbackDepth:1, blunder:0.5},
+  2:{skill:2,  movetime:45,  fallbackDepth:1, blunder:0.3},
+  3:{skill:4,  movetime:70,  fallbackDepth:2, blunder:0.15},
+  4:{skill:6,  movetime:100, fallbackDepth:2, blunder:0.08},
+  5:{skill:8,  movetime:140, fallbackDepth:2, blunder:0.04},
+  6:{skill:10, movetime:180, fallbackDepth:3, blunder:0.02},
+  7:{skill:12, movetime:150, fallbackDepth:3, blunder:0.01},
+  8:{skill:14, movetime:180, fallbackDepth:3, blunder:0},
+  9:{skill:17, movetime:220, fallbackDepth:3, blunder:0},
+  10:{skill:20, movetime:260, fallbackDepth:3, blunder:0},
+  11:{skill:20, movetime:150, fallbackDepth:3, blunder:0, supreme:true}
+};
+
+function genRoomCode(len=5){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s='';
+  for(let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+/* ---------------- Piece list (drives the animated overlay) ---------------- */
+
+function startPieces(){
+  const files = ['a','b','c','d','e','f','g','h'];
+  const backRow = ['r','n','b','q','k','b','n','r'];
+  const list = [];
+  files.forEach((f,i)=>{
+    list.push({id:'w'+backRow[i]+i, square:f+'1', type:backRow[i], color:'w'});
+    list.push({id:'wp'+i, square:f+'2', type:'p', color:'w'});
+    list.push({id:'b'+backRow[i]+i, square:f+'8', type:backRow[i], color:'b'});
+    list.push({id:'bp'+i, square:f+'7', type:'p', color:'b'});
+  });
+  return list;
+}
+
+function updatePieces(pieces, m){
+  let list = pieces.slice();
+  if(m.flags && m.flags.indexOf('e')!==-1){
+    const capSquare = m.to[0] + m.from[1];
+    list = list.filter(p=>p.square!==capSquare);
+  }
+  if(m.captured && !(m.flags && m.flags.indexOf('e')!==-1)){
+    list = list.filter(p=>p.square!==m.to);
+  }
+  const moverIdx = list.findIndex(p=>p.square===m.from);
+  if(moverIdx>=0){
+    const mover = {...list[moverIdx], square:m.to};
+    if(m.promotion) mover.type = m.promotion;
+    list[moverIdx] = mover;
+  }
+  if(m.flags && m.flags.indexOf('k')!==-1){
+    const rank = m.color==='w' ? '1' : '8';
+    const ri = list.findIndex(p=>p.square==='h'+rank);
+    if(ri>=0) list[ri] = {...list[ri], square:'f'+rank};
+  }
+  if(m.flags && m.flags.indexOf('q')!==-1){
+    const rank = m.color==='w' ? '1' : '8';
+    const ri = list.findIndex(p=>p.square==='a'+rank);
+    if(ri>=0) list[ri] = {...list[ri], square:'d'+rank};
+  }
+  return list;
+}
+
+function kingSquareInCheck(chess){
+  if(!(chess.in_check && chess.in_check())) return null;
+  const turn = chess.turn();
+  const board = chess.board();
+  for(let r=0;r<8;r++){
+    for(let f=0;f<8;f++){
+      const p = board[r][f];
+      if(p && p.type==='k' && p.color===turn){
+        return 'abcdefgh'[f] + (8-r);
+      }
+    }
+  }
+  return null;
+}
+
+/* ---------------- UI Components ---------------- */
+
+const SquareBg = memo(function SquareBg({square, light, selected, isLegal, isCapture, lastMove, hintSq, isCheck, onClick}){
+  const file = square[0], rank = square[1];
+  return (
+    <div className={`sq ${light?'light':'dark'} ${selected?'sel':''} ${lastMove?'lastmove':''} ${isCheck?'check':''}`} onClick={onClick}>
+      {file==='a' && <span className="coord rank">{rank}</span>}
+      {rank==='1' && <span className="coord file">{file}</span>}
+      {isLegal && !isCapture && <span className="dot"></span>}
+      {isLegal && isCapture && <span className="ring"></span>}
+      {hintSq && <span className="hint-mark"></span>}
+    </div>
+  );
+});
+
+function squarePos(square, flipped){
+  const files = ['a','b','c','d','e','f','g','h'];
+  let col = files.indexOf(square[0]);
+  let row = 8-parseInt(square[1],10);
+  if(flipped){ col = 7-col; row = 7-row; }
+  return { left:(col*12.5)+'%', top:(row*12.5)+'%' };
+}
+
+const Board = memo(function Board({chess, pieces, onMove, selected, legalTargets, lastMove, hintMove, flipped, isMysteryPiece, checkSquare}){
+  const files = ['a','b','c','d','e','f','g','h'];
+  const ranks = ['8','7','6','5','4','3','2','1'];
+  const rowsOrder = flipped ? [...ranks].reverse() : ranks;
+  const colsOrder = flipped ? [...files].reverse() : files;
+  const occupied = useMemo(()=> new Set(pieces.map(p=>p.square)), [pieces]);
+
+  const cells = [];
+  rowsOrder.forEach((rank)=>{
+    colsOrder.forEach((file)=>{
+      const square = file+rank;
+      const fIdx = files.indexOf(file);
+      const rIdx = 8-parseInt(rank,10);
+      const light = (fIdx+rIdx)%2===0;
+      const isLegal = legalTargets.includes(square);
+      const isCapture = isLegal && occupied.has(square);
+      cells.push(
+        <SquareBg key={square} square={square} light={light}
+          selected={selected===square} isLegal={isLegal} isCapture={isCapture}
+          lastMove={!!(lastMove && (lastMove.from===square || lastMove.to===square))}
+          hintSq={!!(hintMove && (hintMove.from===square || hintMove.to===square))}
+          isCheck={checkSquare===square}
+          onClick={()=>onMove(square)} />
+      );
+    });
+  });
+
+  return (
+    <div className="board">
+      {cells}
+      <div className="piece-layer">
+        {pieces.map(p=>{
+          const pos = squarePos(p.square, flipped);
+          const mystery = isMysteryPiece(p);
+          const colorClass = p.color==='w' ? 'piece-w' : 'piece-b';
+          return (
+            <div key={p.id} className="piece-el" style={{left:pos.left, top:pos.top}}>
+              <span className={`piece ${colorClass}`}>{mystery ? '★' : PIECE_UNICODE[p.color+p.type]}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+function CapturedRow({chess, color}){
+  const history = chess.history({verbose:true});
+  const captured = [];
+  history.forEach(m=>{ if(m.captured){ const capColor = m.color==='w'?'b':'w'; if(capColor===color) captured.push(capColor+m.captured); } });
+  return (
+    <div className={`captured ${color==='w'?'white':'black'}`}>
+      {captured.map((p,i)=><span key={i}>{PIECE_UNICODE[p]}</span>)}
+    </div>
+  );
+}
+
+function PromotionModal({color, onChoose}){
+  const pieces = ['q','r','b','n'];
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        <div style={{marginBottom:8, fontSize:14}}>Choose a piece to promote to</div>
+        <div className="promo-choices">
+          {pieces.map(p=>(
+            <button key={p} onClick={()=>onChoose(p)}>{PIECE_UNICODE[color+p]}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalysisScreen({moveEvals, onBack}){
+  const svgW = 400, svgH = 70;
+  const maxAbs = Math.max(200, ...moveEvals.map(m=>Math.abs(m.evalAfter)));
+  const pts = moveEvals.map((m,i)=>{
+    const x = moveEvals.length<=1 ? 0 : (i/(moveEvals.length-1))*svgW;
+    const y = svgH/2 - (m.evalAfter/maxAbs)*(svgH/2-4);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const blunders = moveEvals.filter(m=>m.tag==='blunder').length;
+  const inacc = moveEvals.filter(m=>m.tag==='inaccuracy').length;
+
+  return (
+    <div className="analysis-panel">
+      <div className="panel">
+        <h3 style={{marginBottom:12}}>Match Analysis</h3>
+        <svg className="eval-graph" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none">
+          <line x1="0" y1={svgH/2} x2={svgW} y2={svgH/2} stroke="#5a4530" strokeWidth="1"/>
+          <polyline points={pts} fill="none" stroke="#c9a24b" strokeWidth="2"/>
+        </svg>
+        <div className="summary-tags">
+          <span className="tag blunder">Blunders: {blunders}</span>
+          <span className="tag inaccuracy">Inaccuracies: {inacc}</span>
+        </div>
+        <div className="movelist">
+          {(() => {
+            const rows = [];
+            for(let i=0;i<moveEvals.length;i+=2){
+              const w = moveEvals[i];
+              const b = moveEvals[i+1];
+              rows.push(
+                <div className="move-row" key={i}>
+                  <span>{i/2+1}.</span>
+                  <span className={`mv ${w.tag}`}>{w.san}{w.tag==='blunder' && ' ⚠️'}{w.tag==='inaccuracy' && ' !'}</span>
+                  <span className={b? `mv ${b.tag}`:''}>{b ? (b.san + (b.tag==='blunder' ? ' ⚠️' : b.tag==='inaccuracy' ? ' !' : '')) : ''}</span>
+                </div>
+              );
+            }
+            return rows;
+          })()}
+        </div>
+        <button className="primary-btn" style={{width:'100%', marginTop:12}} onClick={onBack}>Back to Menu</button>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const [screen, setScreen] = useState('menu');
+  const [tab, setTab] = useState('computer');
+  const [vsMode, setVsMode] = useState('computer');
+  const [level, setLevel] = useState(1);
+  const [chess, setChess] = useState(()=>new Chess());
+  const [pieces, setPieces] = useState(()=>startPieces());
+  const [selected, setSelected] = useState(null);
+  const [legalTargets, setLegalTargets] = useState([]);
+  const [lastMove, setLastMove] = useState(null);
+  const [hintMove, setHintMove] = useState(null);
+  const [thinking, setThinking] = useState(false);
+  const depthLabelRef = useRef(null);
+  const [pendingPromotion, setPendingPromotion] = useState(null);
+  const [resultInfo, setResultInfo] = useState(null);
+  const [moveEvals, setMoveEvals] = useState([]);
+  const [tick, setTick] = useState(0);
+
+  const [colorChoice, setColorChoice] = useState('w');
+  const [specialToggle, setSpecialToggle] = useState(false);
+  const [specialActive, setSpecialActive] = useState(false);
+  const [onlineStatus, setOnlineStatus] = useState('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [roomCode, setRoomCode] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [myColor, setMyColor] = useState('w');
+  const peerRef = useRef(null);
+  const connRef = useRef(null);
+  const chessRef = useRef(null);
+  const vsModeRef = useRef('computer');
+  const myColorRef = useRef('w');
+  const intentionalCloseRef = useRef(false);
+
+  useEffect(()=>{ chessRef.current = chess; }, [chess]);
+  useEffect(()=>{ vsModeRef.current = vsMode; }, [vsMode]);
+  useEffect(()=>{ myColorRef.current = myColor; }, [myColor]);
+  useEffect(()=>{ initEngine(); }, []); // warm up Stockfish in the background as soon as the app loads
+
+  function resolveColor(choice){
+    if(choice==='random') return Math.random()<0.5 ? 'w' : 'b';
+    return choice;
+  }
+
+  function refresh(){ setTick(t=>t+1); }
+
+  function isMysteryPiece(piece){
+    if(vsMode==='computer') return piece.color !== myColor;
+    return specialActive && piece.color !== myColor;
+  }
+
+  function cleanupOnline(){
+    intentionalCloseRef.current = true;
+    try{ if(connRef.current) connRef.current.close(); }catch(e){}
+    try{ if(peerRef.current) peerRef.current.destroy(); }catch(e){}
+    connRef.current = null; peerRef.current = null;
+  }
+
+  function resetComputerGame(lvl){
+    cleanupOnline();
+    const c = new Chess();
+    const myC = resolveColor(colorChoice);
+    setChess(c);
+    setPieces(startPieces());
+    setSelected(null); setLegalTargets([]); setLastMove(null); setHintMove(null);
+    setResultInfo(null); setMoveEvals([]);
+    setLevel(lvl);
+    setVsMode('computer');
+    setMyColor(myC);
+    setScreen('game');
+    if(myC==='b'){
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          triggerComputerMove(c, lvl);
+        });
+      });
+    }
+  }
+
+  function startOnlineMatch(color, special){
+    const c = new Chess();
+    setChess(c);
+    setPieces(startPieces());
+    setSelected(null); setLegalTargets([]); setLastMove(null); setHintMove(null);
+    setResultInfo(null); setMoveEvals([]);
+    setMyColor(color);
+    setSpecialActive(special);
+    setVsMode('online');
+    setScreen('game');
+  }
+
+  function createRoom(){
+    setErrorMsg('');
+    intentionalCloseRef.current = false;
+    const code = genRoomCode();
+    const hostColor = resolveColor(colorChoice);
+    setRoomCode(code);
+    setOnlineStatus('waiting');
+    setScreen('onlineLobby');
+    const peer = new Peer('chessvara-'+code, {debug:0});
+    peerRef.current = peer;
+    peer.on('connection', (conn)=>{
+      connRef.current = conn;
+      conn.on('open', ()=>{
+        conn.send({type:'init', color: hostColor==='w'?'b':'w', special: specialToggle});
+        startOnlineMatch(hostColor, specialToggle);
+      });
+      conn.on('data', handleRemoteData);
+      conn.on('close', ()=> handleDisconnect());
+    });
+    peer.on('error', (err)=>{
+      setOnlineStatus('error');
+      setErrorMsg('Could not create a room. Please try again.');
+    });
+  }
+
+  function joinRoom(){
+    if(!joinCode || joinCode.trim().length<3) return;
+    setErrorMsg('');
+    intentionalCloseRef.current = false;
+    setOnlineStatus('connecting');
+    setScreen('onlineLobby');
+    const peer = new Peer({debug:0});
+    peerRef.current = peer;
+    peer.on('open', ()=>{
+      const conn = peer.connect('chessvara-'+joinCode.trim().toUpperCase(), {reliable:true});
+      connRef.current = conn;
+      conn.on('data', (data)=>{
+        if(data.type==='init'){
+          startOnlineMatch(data.color, data.special);
+        } else handleRemoteData(data);
+      });
+      conn.on('close', ()=> handleDisconnect());
+      conn.on('error', ()=>{ setOnlineStatus('error'); setErrorMsg('Could not connect. Check the room code and try again.'); });
+    });
+    peer.on('error', (err)=>{
+      setOnlineStatus('error');
+      setErrorMsg('Could not connect. Check the room code and try again.');
+    });
+  }
+
+  function handleRemoteData(data){
+    if(data.type==='move'){
+      const c = chessRef.current;
+      const res = c.move({from:data.from, to:data.to, promotion:data.promotion || 'q'});
+      if(res){
+        setLastMove({from:res.from, to:res.to});
+        setPieces(prev=>updatePieces(prev, res));
+        refresh();
+        checkGameOver(c);
+      }
+    } else if(data.type==='resign'){
+      setResultInfo({title:'Your Opponent Resigned', sub:'You win! 🏆', winner:'me'});
+      setScreen('result');
+    }
+  }
+
+  function handleDisconnect(){
+    if(intentionalCloseRef.current) return;
+    setResultInfo({title:'Connection Lost', sub:'Your opponent disconnected.', winner:'none'});
+    setScreen('result');
+  }
+
+  function cancelOnlineLobby(){
+    cleanupOnline();
+    setOnlineStatus('idle');
+    setScreen('menu');
+  }
+
+  function checkGameOver(c){
+    if(c.game_over()){
+      let title, sub, winner;
+      if(c.in_checkmate()){
+        const winningSide = c.turn()==='w' ? 'b' : 'w';
+        winner = winningSide===myColorRef.current ? 'me' : 'opponent';
+        title = winner==='me' ? 'You Won! 🏆' : 'You Lost 😔';
+        sub = 'Checkmate';
+      } else {
+        let reason = 'Draw';
+        if(c.in_stalemate()) reason='Stalemate';
+        else if(c.insufficient_material()) reason='Insufficient material';
+        else if(c.in_threefold_repetition()) reason='Threefold repetition';
+        winner='draw'; title='Draw'; sub=reason;
+      }
+      setResultInfo({title, sub, winner});
+      setScreen('result');
+      return true;
+    }
+    return false;
+  }
+
+  async function triggerComputerMove(c, lvl){
+    setThinking(true);
+    if(depthLabelRef.current) depthLabelRef.current.textContent = '';
+    const mv = await requestEngineMove(c.fen(), lvl, (depth)=>{
+      if(depthLabelRef.current) depthLabelRef.current.textContent = 'depth '+depth;
+    });
+    if(mv){
+      const res = c.move(mv);
+      if(res){
+        setLastMove({from:res.from, to:res.to});
+        setPieces(prev=>updatePieces(prev, res));
+        refresh();
+        checkGameOver(c);
+      }
+    }
+    setThinking(false);
+    if(depthLabelRef.current) depthLabelRef.current.textContent = '';
+  }
+
+  function doMove(from, to, promotion){
+    const c = chess;
+    const mv = c.move({from, to, promotion: promotion || 'q'});
+    if(!mv) return false;
+
+    // Paint the player's own move immediately and synchronously.
+    flushSync(()=>{
+      setLastMove({from,to});
+      setPieces(prev=>updatePieces(prev, mv));
+      setSelected(null); setLegalTargets([]); setHintMove(null);
+      refresh();
+    });
+
+    if(vsMode==='online' && connRef.current){
+      connRef.current.send({type:'move', from, to, promotion: promotion||'q'});
+    }
+
+    const over = checkGameOver(c);
+    const computerColor = myColor==='w' ? 'b' : 'w';
+    if(!over && vsMode==='computer' && c.turn()===computerColor){
+      // Wait for two real animation frames — this guarantees the browser has actually
+      // painted your move to the screen before Stockfish is allowed to start hogging the CPU.
+      // Without this, a heavy search (Supreme/high levels) can starve the paint of your
+      // own move on slower devices, making it look delayed even though it already happened.
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          triggerComputerMove(c, level);
+        });
+      });
+    }
+    return true;
+  }
+
+  function onSquareClick(square){
+    if(thinking) return;
+    const c = chess;
+    if(c.turn()!==myColor) return;
+    const piece = c.get(square);
+
+    if(selected){
+      if(legalTargets.includes(square)){
+        const movingPiece = c.get(selected);
+        const isPromotion = movingPiece && movingPiece.type==='p' && (square[1]==='8' || square[1]==='1');
+        if(isPromotion){
+          setPendingPromotion({from:selected, to:square, color:movingPiece.color});
+        } else {
+          doMove(selected, square);
+        }
+        return;
+      }
+      if(piece && piece.color===c.turn()){
+        setSelected(square);
+        setLegalTargets(c.moves({square, verbose:true}).map(m=>m.to));
+      } else {
+        setSelected(null); setLegalTargets([]);
+      }
+    } else {
+      if(piece && piece.color===c.turn()){
+        setSelected(square);
+        setLegalTargets(c.moves({square, verbose:true}).map(m=>m.to));
+      }
+    }
+  }
+
+  function choosePromotion(p){
+    if(!pendingPromotion) return;
+    doMove(pendingPromotion.from, pendingPromotion.to, p);
+    setPendingPromotion(null);
+  }
+
+  async function showHint(){
+    if(thinking) return;
+    setThinking(true);
+    const mv = await requestHintMove(chess.fen());
+    if(mv) setHintMove({from:mv.from, to:mv.to});
+    setThinking(false);
+  }
+
+  function resign(){
+    if(vsMode==='online' && connRef.current){
+      connRef.current.send({type:'resign'});
+    }
+    setResultInfo({title:'You Resigned', sub: vsMode==='computer' ? 'The computer wins' : 'Your opponent wins', winner:'other'});
+    setScreen('result');
+  }
+
+  function leaveGame(){
+    if(vsMode==='online') cleanupOnline();
+    setScreen('menu');
+  }
+
+  function buildAnalysis(){
+    const replay = new Chess();
+    const hist = chess.history({verbose:true});
+    const evals = [];
+    let prevEval = 0;
+    hist.forEach((m)=>{
+      replay.move(m.san);
+      const afterEval = evaluateBoard(replay);
+      const delta = (m.color==='w') ? (afterEval - prevEval) : (prevEval - afterEval);
+      let tg = 'good';
+      if(delta < -180) tg='blunder';
+      else if(delta < -70) tg='inaccuracy';
+      evals.push({san:m.san, evalAfter:afterEval, tag:tg});
+      prevEval = afterEval;
+    });
+    setMoveEvals(evals);
+    setScreen('analysis');
+  }
+
+  if(screen==='menu'){
+    return (
+      <div>
+        <div className="panel">
+          <div className="settings-bar">
+            <div className="label">Play as</div>
+            <div className="color-select">
+              <button className={colorChoice==='w'?'active':''} onClick={()=>setColorChoice('w')}>
+                <span className="color-swatch w"></span> White
+              </button>
+              <button className={colorChoice==='b'?'active':''} onClick={()=>setColorChoice('b')}>
+                <span className="color-swatch b"></span> Black
+              </button>
+              <button className={colorChoice==='random'?'active':''} onClick={()=>setColorChoice('random')}>
+                <span className="color-swatch r"></span> Random
+              </button>
+            </div>
+          </div>
+
+          <div className="mode-tabs">
+            <button className={tab==='computer'?'active':''} onClick={()=>setTab('computer')}>Vs Computer</button>
+            <button className={tab==='online'?'active':''} onClick={()=>setTab('online')}>Play Online</button>
+          </div>
+
+          {tab==='computer' ? (
+            <div>
+              <div className="mystery-banner">
+                <span className="star">★</span> <strong>Mystery Mode is always on here.</strong><br/>
+                You see your own pieces normally, but the computer's pieces all look like identical stars.
+                Figure out what's what from how they move.
+              </div>
+              <div className="level-grid">
+                {Array.from({length:10}, (_,i)=>i+1).map(lv=>(
+                  <div key={lv} className="level-btn" onClick={()=>resetComputerGame(lv)}>
+                    {lv}
+                    <small>{lv<=3?'Easy':lv<=6?'Medium':lv<=9?'Hard':'Expert'}</small>
+                  </div>
+                ))}
+              </div>
+              <div className="supreme-btn" onClick={()=>resetComputerGame(11)}>
+                👑 Supreme Level
+              </div>
+              <div className="footer-hint">All levels are always open — jump straight to whichever one you feel like. The engine now thinks in the background, so the board never freezes while it's calculating.</div>
+              <div style={{fontSize:10, opacity:.35, textAlign:'center', marginTop:14}}>build 7</div>
+            </div>
+          ) : (
+            <div>
+              <div className="toggle-row">
+                <span>Enable Mystery Mode for this match<br/><small style={{opacity:.6}}>Hides your opponent's pieces as ★ on both screens</small></span>
+                <label className="switch">
+                  <input type="checkbox" checked={specialToggle} onChange={e=>setSpecialToggle(e.target.checked)} />
+                  <span className="slider"></span>
+                </label>
+              </div>
+
+              <div className="online-section">
+                <h4>Host a match</h4>
+                <button className="primary-btn" style={{width:'100%'}} onClick={createRoom}>Create Room</button>
+              </div>
+
+              <div className="online-section">
+                <h4>Join a friend's match</h4>
+                <div className="join-row">
+                  <input placeholder="ROOM CODE" maxLength={6} value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} />
+                  <button className="primary-btn" onClick={joinRoom} disabled={joinCode.trim().length<3}>Join</button>
+                </div>
+              </div>
+              <div className="footer-hint">Your friend can be on any device, anywhere — share your room code with them to connect directly. The "Play as" choice above applies when you create a room; your friend gets whichever color is left. Whoever creates the room also chooses whether Mystery Mode is on.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if(screen==='onlineLobby'){
+    return (
+      <div className="panel">
+        {onlineStatus==='waiting' && (
+          <div>
+            <div className="status-msg">Share this code with your friend</div>
+            <div className="room-code-display">
+              <div className="code">{roomCode}</div>
+              <div className="thinking"><span className="dotpulse"></span><span className="dotpulse"></span><span className="dotpulse"></span></div>
+              <div className="status-msg">Waiting for them to join…</div>
+            </div>
+          </div>
+        )}
+        {onlineStatus==='connecting' && (
+          <div>
+            <div className="room-code-display">
+              <div className="thinking"><span className="dotpulse"></span><span className="dotpulse"></span><span className="dotpulse"></span></div>
+              <div className="status-msg">Connecting to room {joinCode}…</div>
+            </div>
+          </div>
+        )}
+        {onlineStatus==='error' && (
+          <div className="error-msg">{errorMsg}</div>
+        )}
+        <button className="ghost-btn" style={{width:'100%'}} onClick={cancelOnlineLobby}>Cancel</button>
+      </div>
+    );
+  }
+
+  if(screen==='game'){
+    const c = chess;
+    let status;
+    if(vsMode==='computer'){
+      const myTurn = c.turn()===myColor;
+      status = myTurn ? 'Your move' : (thinking ? 'Computer is thinking...' : "Computer's move");
+    } else {
+      const myTurn = c.turn()===myColor;
+      status = myTurn ? 'Your move' : "Opponent's move";
+    }
+    const checkSquare = kingSquareInCheck(c);
+    if(checkSquare) status += ' — Check!';
+    const computerTurn = vsMode==='computer' && c.turn()!==myColor;
+
+    return (
+      <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
+        <div className="topbar">
+          <button onClick={leaveGame}>← Menu</button>
+          <span style={{fontSize:13, color:'var(--gold)'}}>
+            {vsMode==='computer' ? (level===11?'Supreme':'Level '+level) : `Online · You are ${myColor==='w'?'White':'Black'}`}
+          </span>
+          {vsMode==='computer'
+            ? <button onClick={()=>resetComputerGame(level)}>New Game</button>
+            : <span style={{width:70}}></span>}
+        </div>
+        <CapturedRow chess={c} color={myColor==='w' ? 'b' : 'w'} />
+        <div className="status-line">{status}</div>
+        <div className={`board-wrap ${computerTurn && thinking ? 'opponent-turn' : ''}`}>
+          <Board chess={c} pieces={pieces} onMove={onSquareClick} selected={selected}
+            legalTargets={legalTargets} lastMove={lastMove} hintMove={hintMove}
+            flipped={myColor==='b'} isMysteryPiece={isMysteryPiece} checkSquare={checkSquare} />
+        </div>
+        <CapturedRow chess={c} color={myColor} />
+        <div className="thinking">{thinking && <><span className="dotpulse"></span><span className="dotpulse"></span><span className="dotpulse"></span><span ref={depthLabelRef} style={{marginLeft:6, opacity:.7}}></span></>}</div>
+        <div className="controls">
+          <button onClick={showHint} disabled={thinking || c.turn()!==myColor}>💡 Hint</button>
+          <button onClick={resign}>🏳️ Resign</button>
+        </div>
+        {pendingPromotion && <PromotionModal color={pendingPromotion.color} onChoose={choosePromotion} />}
+      </div>
+    );
+  }
+
+  if(screen==='result'){
+    return (
+      <div className="panel">
+        <div className="result-box">
+          <div className="result-title">{resultInfo.title}</div>
+          <div className="result-sub">{resultInfo.sub}</div>
+        </div>
+        <button className="primary-btn" style={{width:'100%'}} onClick={buildAnalysis}>🔍 View Analysis</button>
+        <button className="ghost-btn" style={{width:'100%', marginTop:8}} onClick={()=>{ cleanupOnline(); setScreen('menu'); }}>Back to Menu</button>
+      </div>
+    );
+  }
+
+  if(screen==='analysis'){
+    return <AnalysisScreen moveEvals={moveEvals} onBack={()=>{ cleanupOnline(); setScreen('menu'); }} />;
+  }
+
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+</script>
+
+</body>
+</html>
