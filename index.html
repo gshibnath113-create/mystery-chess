@@ -216,7 +216,7 @@
 <body>
 
 <div class="brand"><span class="crown">♛</span><h1>Chessvara</h1></div>
-<div class="subtitle">Mystery Chess · 10 Levels + Supreme · Online 2-Player</div>
+<div class="subtitle">Mystery Chess ,A Crazy Game</div>
 
 <div id="app"></div>
 
@@ -1027,9 +1027,9 @@ function App(){
           {tab==='computer' ? (
             <div>
               <div className="mystery-banner">
-                <span className="star">★</span> <strong>Mystery Mode is always on here.</strong><br/>
-                You see your own pieces normally, but the computer's pieces all look like identical stars.
-                Figure out what's what from how they move.
+                <span className="star">★</span> <strong>Mystery Mode is on.</strong><br/>
+                info:- You see your own pieces normally, but the opponent's pieces all look like identical stars.
+                concept of probability and memory are the key. here you take risk.... best of luck
               </div>
               <div className="level-grid">
                 {Array.from({length:10}, (_,i)=>i+1).map(lv=>(
@@ -1042,7 +1042,8 @@ function App(){
               <div className="supreme-btn" onClick={()=>resetComputerGame(11)}>
                 👑 Supreme Level
               </div>
-              <div className="footer-hint">All levels are always open — jump straight to whichever one you feel like. The engine now thinks in the background, so the board never freezes while it's calculating.</div>
+              <div className="footer-hint">it's very interesting when you play with your friends 
+              info:- after clicking the create room button you get a code give it to your friend</div>
               <div style={{fontSize:10, opacity:.35, textAlign:'center', marginTop:14}}>build 7</div>
             </div>
           ) : (
